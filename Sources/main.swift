@@ -21,11 +21,39 @@ class ClockSettings: ObservableObject {
     }
 }
 
+// MARK: - Traffic Light Buttons
+
+struct TrafficLightButtons: View {
+    @State private var isGroupHovering = false
+
+    var body: some View {
+        Button(action: { NSApp.terminate(nil) }) {
+            ZStack {
+                Circle()
+                    .fill(Color(red: 1.0, green: 0.38, blue: 0.34))
+                    .frame(width: 12, height: 12)
+                if isGroupHovering {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 6.5, weight: .bold))
+                        .foregroundStyle(.black.opacity(0.5))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isGroupHovering = hovering
+            }
+        }
+    }
+}
+
 // MARK: - Clock View
 
 struct ClockFace: View {
     @ObservedObject var settings = ClockSettings.shared
     @State private var now = Date()
+    @State private var isHovering = false
 
     let timer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
 
@@ -57,6 +85,17 @@ struct ClockFace: View {
                 .opacity(0.5)
         )
         .overlay(animatedBorder)
+        .overlay(alignment: .topLeading) {
+            TrafficLightButtons()
+                .padding(.top, 12)
+                .padding(.leading, 14)
+                .opacity(isHovering ? 1 : 0)
+                .allowsHitTesting(isHovering)
+                .animation(.easeInOut(duration: 0.2), value: isHovering)
+        }
+        .onHover { hovering in
+            isHovering = hovering
+        }
         .shadow(color: .black.opacity(0.35), radius: 20, y: 8)
         .preferredColorScheme(.dark)
         .padding(28)
@@ -128,6 +167,7 @@ class AppController: NSObject, NSMenuDelegate {
         panel.level = .floating
         panel.isMovableByWindowBackground = true
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        panel.acceptsMouseMovedEvents = true
 
         let hosting = NSHostingView(rootView: ClockFace())
         panel.contentView = hosting
